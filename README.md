@@ -55,8 +55,10 @@ Session state is preserved in immutable filesystem artifacts rather than fragile
 *   **`BOARD.md`** -- Live development board tracking tasks, acceptance rubrics, priority, dependencies, and state (`TODO`, `IN_PROGRESS`, `DONE`, `BLOCKED`, `FAILED`).
 *   **`LEDGER.md`** -- Immutable append-only audit trail logging timestamps, test outcomes, attempt counts, and token consumption.
 
-### 4. Sandbox Path Containment & Security Gates
-Destructive operations such as recursive deletion (`rm -rf /`, `rd /s`), system alteration (`format`, `shutdown`), Git mutations (`git push`, `git reset --hard`), and uninspected piping to shells are permanently blocked. All file operations are sandboxed strictly within the project root directory.
+### 4. Sandbox Path Containment & Command Blocklist
+All file operations (`read_file`, `write_file`, `replace_content`, search/discovery tools) are sandboxed strictly within the project root directory — path traversal, symlink escapes, and cross-drive access are rejected. Command execution is filtered through a denylist that blocks known-destructive patterns (recursive deletion, `format`, `shutdown`, download-then-execute chains, irreversible Git mutations, encoded PowerShell payloads, and more).
+
+**This is a denylist, not a sandbox.** LoopGraph gives an LLM the ability to run shell commands on your machine. A denylist can be tightened over time but can never be proven complete — treat `loopgraph run` the same way you'd treat handing an unattended script shell access: run it in a disposable environment or container, review `LEDGER.md` after each run, and never point it at a repository whose contents (README, VISION.md, source comments) you don't trust, since that content is fed into the agent's context and could attempt to steer it. There is currently no interactive human-approval step before a command executes — only blocked patterns are rejected.
 
 ---
 

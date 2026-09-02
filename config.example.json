@@ -8,36 +8,5 @@
   "max_loop_iters": 25,
   "max_verify_iters": 8,
   "budget_tokens": 2000000,
-  "stop_on_fail": false,
-  "exclude_dirs": [
-    ".git",
-    "node_modules",
-    "__pycache__",
-    ".venv",
-    "venv",
-    "dist",
-    "build",
-    ".next",
-    ".cache",
-    ".loopgraph"
-  ],
-  "blocked_patterns": [
-    "\\brm\\s+(-\\w*\\s+)*-?[rf]{1,2}\\b.*\\s/[^\\s]*",
-    "\\brd\\s+/s",
-    "\\bdel\\s+/[sq]",
-    "\\bformat\\s+",
-    "\\bshutdown\\b",
-    "\\bgit\\s+push\\b",
-    "\\bgit\\s+reset\\s+--hard\\b",
-    "\\bgit\\s+clean\\b",
-    "\\btaskkill\\b",
-    "\\breg\\s+(add|delete)\\b",
-    "\\bmkfs\\b",
-    "\\bdd\\s+if=",
-    "\\bsudo\\b",
-    "\\bcurl\\b.*\\|\\s*(ba)?sh",
-    "\\bInvoke-Expression\\b",
-    "\\bchpasswd\\b",
-    "\\bnet\\s+user\\b"
-  ]
+  "stop_on_fail": false
 }

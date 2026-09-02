@@ -13,7 +13,7 @@ from loopgraph.memory.vision import VisionManager
 from loopgraph.safety.guardrails import Guardrails
 from loopgraph.tools.base import BaseTool, ToolRegistry, ToolResult
 
-__version__ = "0.2.0"
+__version__ = "1.0.1"
 
 __all__ = [
     "GraphEngine",

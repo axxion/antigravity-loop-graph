@@ -6,6 +6,7 @@ Scans project structure, reads VISION.md, and generates verifiable tasks via LLM
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -17,6 +18,8 @@ from loopgraph.llm.client import LLMClient
 from loopgraph.memory.board import BoardManager
 from loopgraph.memory.vision import VisionManager
 from loopgraph.safety.guardrails import Guardrails
+
+logger = logging.getLogger("loopgraph.analyze")
 
 
 class AnalyzeNode(BaseNode):
@@ -142,10 +145,12 @@ class AnalyzeNode(BaseNode):
                             raw_tasks = data.get("tasks", [])
                             for t_dict in raw_tasks:
                                 tasks_from_llm.append(Task.from_dict(t_dict))
-                        except json.JSONDecodeError:
-                            pass
-            except Exception:
-                pass
+                        except json.JSONDecodeError as e:
+                            logger.warning("LLM plan yanıtı JSON olarak ayrıştırılamadı: %s", e)
+            except Exception as e:
+                logger.warning(
+                    "LLM plan çağrısı başarısız oldu, heuristic planner'a düşülüyor: %s", e
+                )
 
         # If LLM returned no tasks or is not configured, use HeuristicPlanner directly
         if not tasks_from_llm:

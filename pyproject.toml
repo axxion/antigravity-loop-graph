@@ -21,3 +21,6 @@ Issues = "https://github.com/axxion/antigravity-loop-graph/issues"
 
 [project.scripts]
 loopgraph = "loopgraph.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["loopgraph*"]

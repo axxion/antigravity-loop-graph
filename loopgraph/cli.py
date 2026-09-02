@@ -16,6 +16,7 @@ if hasattr(sys.stdout, "reconfigure"):
     except Exception:
         pass
 
+from loopgraph.antigravity_scaffold import scaffold_antigravity_integration
 from loopgraph.core.state import TaskStatus
 from loopgraph.engine import EngineConfig, GraphEngine
 from loopgraph.memory.board import BoardManager
@@ -53,11 +54,15 @@ def cmd_init(args) -> int:
         import json
         cfg_file.write_text(json.dumps(example_cfg, indent=2), encoding="utf-8")
 
+    scaffolded = scaffold_antigravity_integration(proj)
+
     log(f"✅ Proje hafıza dosyaları hazırlandı: {proj}")
     log("  - VISION.md (Proje hedefleri)")
     log("  - BOARD.md  (Geliştirme panosu)")
     log("  - LEDGER.md (İş defteri)")
     log("  - config.json (Model yapılandırması)")
+    if scaffolded:
+        log("  - .agents/skills/loopgraph/SKILL.md ve .agents/rules/loopgraph.md (Antigravity IDE Native Mode)")
     return 0
 
 

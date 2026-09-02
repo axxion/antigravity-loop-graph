@@ -1,4 +1,19 @@
----
+"""
+Scaffolds Google Antigravity IDE native-mode integration files
+(.agents/skills/loopgraph/SKILL.md, .agents/rules/loopgraph.md) into a target project.
+
+Without this, `loopgraph init` only creates VISION.md/BOARD.md/LEDGER.md/config.json —
+Antigravity IDE has nothing telling it how to run LoopGraph natively (no API key) in
+that project, since `.agents/` customization files are per-workspace, not something
+`pip install` can place outside this repository.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import List
+
+SKILL_MD_TEMPLATE = """---
 name: loopgraph
 description: >-
   Autonomous Loop & Graph Engineering Suite for Google Antigravity. Use this skill when
@@ -86,3 +101,48 @@ When the user types `/goal` or asks to autonomously complete a milestone in Anti
 1. **Maker/Checker Separation ("Yapan Notlandıramaz"):** verification must be a real, independently-run check — not the same reasoning pass that wrote the code.
 2. **Externalized Memory:** all status lives on disk in `BOARD.md` and `LEDGER.md`, not just in conversation context.
 3. **Anti-Thrashing:** if you find yourself repeating the identical action with the identical result 3 times in a row, stop and mark the task `blocked` with a note — do not loop indefinitely.
+"""
+
+RULES_MD_TEMPLATE = """# Loop & Graph Engineering Rules for Antigravity
+
+> [!NOTE]
+> These rules govern autonomous loop execution and multi-stage graph state transitions.
+
+## 1. Loop Engineering Disciplines
+- **Self-Correcting ReAct Loops:** Every implementation step must follow `Sense -> Think -> Act -> Verify`.
+- **Surgical Code Modifications:** Never overwrite entire files. Always use targeted replacements (`replace_content`) to prevent hallucinated code regressions.
+- **Self-Verification Before Done:** The implementer must execute test/build commands to prove acceptance criteria before calling `task_done` or marking a `BOARD.md` row `done`.
+
+## 2. Graph Engineering & State Machine
+- **State Decomposition:** Large goals must be decomposed into atomic tasks with explicit acceptance criteria.
+- **Topological Sorting:** Tasks with prerequisites (`depends_on`) must never run until their dependencies are marked `done`.
+- **Maker/Checker Separation:** Independent verification runs with zero conversation bias and read-only tools/behavior.
+- **Externalized Persistence:** All state lives on disk (`VISION.md`, `BOARD.md`, `LEDGER.md`) — never only in conversation history, so a `/compact` or new session can resume exactly where the last one left off.
+
+## 3. Native-Mode / CLI-Mode Interop
+- `BOARD.md` and `LEDGER.md` are a shared on-disk contract between Antigravity-native execution and the `loopgraph` CLI. When editing them yourself, follow the exact table/entry format documented in `.agents/skills/loopgraph/SKILL.md` so a later `loopgraph status` or `loopgraph run` still parses your work correctly.
+"""
+
+
+def scaffold_antigravity_integration(project_path: Path) -> List[Path]:
+    """Writes the .agents/skills/loopgraph/SKILL.md and .agents/rules/loopgraph.md
+    files into the target project so Antigravity IDE Native Mode is available there,
+    not just inside this repository. Existing files are left untouched (idempotent)."""
+    project_path = Path(project_path).resolve()
+    written: List[Path] = []
+
+    skill_dir = project_path / ".agents" / "skills" / "loopgraph"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_file = skill_dir / "SKILL.md"
+    if not skill_file.exists():
+        skill_file.write_text(SKILL_MD_TEMPLATE, encoding="utf-8")
+        written.append(skill_file)
+
+    rules_dir = project_path / ".agents" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+    rules_file = rules_dir / "loopgraph.md"
+    if not rules_file.exists():
+        rules_file.write_text(RULES_MD_TEMPLATE, encoding="utf-8")
+        written.append(rules_file)
+
+    return written

@@ -32,6 +32,13 @@ ENV/
 *.swp
 *.swo
 
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+config.json
+
 # Antigravity runtime cache
 .agents/.cache/
 .pytest_cache/
@@ -44,3 +51,12 @@ antigravity_optimizer/
 .agents/plugins/token-optimizer/
 .agents/skills/token-optimizer/
 .agents/rules/token_optimization.md
+.agents/hooks.json
+tests/run_optimizer_tests.py
+tests/test_ast_skeleton.py
+tests/test_auditor.py
+tests/test_compressor.py
+tests/test_generators.py
+
+# Internal audit reports (not part of the public deliverable)
+test-raporlari/

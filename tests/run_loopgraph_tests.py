@@ -29,6 +29,11 @@ from tests.test_edge_cases import (
     test_security_command_injection_and_chained_attacks,
     test_file_tools_edge_cases,
 )
+from tests.test_guardrails_bypass import test_guardrails_blocks_known_bypasses
+from tests.test_antigravity_scaffold import (
+    test_scaffold_writes_skill_and_rules_files,
+    test_scaffold_is_idempotent_and_preserves_edits,
+)
 
 LOOPGRAPH_TESTS = [
     ("test_path_sandbox_containment", test_path_sandbox_containment),
@@ -47,6 +52,9 @@ LOOPGRAPH_TESTS = [
     ("test_security_path_traversal_and_drive_escaping", test_security_path_traversal_and_drive_escaping),
     ("test_security_command_injection_and_chained_attacks", test_security_command_injection_and_chained_attacks),
     ("test_file_tools_edge_cases", test_file_tools_edge_cases),
+    ("test_guardrails_blocks_known_bypasses", test_guardrails_blocks_known_bypasses),
+    ("test_scaffold_writes_skill_and_rules_files", test_scaffold_writes_skill_and_rules_files),
+    ("test_scaffold_is_idempotent_and_preserves_edits", test_scaffold_is_idempotent_and_preserves_edits),
 ]
 
 
@@ -71,9 +79,8 @@ def run_all():
     print("=" * 65)
     print(f"  LOOPGRAPH RESULTS: {passed} passed, {failed} failed.")
     print("=" * 65)
-    if failed > 0:
-        sys.exit(1)
+    return failed
 
 
 if __name__ == "__main__":
-    run_all()
+    sys.exit(1 if run_all() > 0 else 0)

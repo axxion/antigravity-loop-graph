@@ -14,10 +14,11 @@ DEFAULT_BLOCKED_PATTERNS: List[str] = [
     # Destructive directory / file removal
     r"\brm\s+(-\w*\s+)*-?[rf]{1,2}\b.*\s/[^\s]*",   # rm -rf /...
     r"\brd\s+/s",                                   # Windows cmd rd /s
-    r"\bdel\s+/[sq]",                               # Windows cmd del /s /q
-    r"Remove-Item\b.*-Recurse",                     # PowerShell recursive delete
+    r"\bdel\s+/[sqf]",                              # Windows cmd del /s /q /f
+    r"Remove-Item\b.*-(Recurse|Force)",             # PowerShell recursive/forced delete
     r"\brmdir\s+/s\b",
-    
+    r"\bcmd(\.exe)?\s+/c\s+del\b",                  # cmd /c del ... (single-file delete escape)
+
     # System modifications / destruction
     r"\bformat\s+[a-zA-Z]:",
     r"\bformat\s+",
@@ -31,17 +32,28 @@ DEFAULT_BLOCKED_PATTERNS: List[str] = [
     r"\bchpasswd\b",
     r"\bnet\s+user\b",
     r"\bsudo\b",
-    
+
     # Code execution bypassing / network piping / shell piping
-    r"\bcurl\b.*\|\s*(ba)?sh",
-    r"\bwget\b.*\|\s*(ba)?sh",
+    r"\b(curl|wget)\b.*\|\s*(ba)?sh",
     r"\|\s*(ba)?sh\b",
     r"\|\s*powershell(\.exe)?\b",
     r"\|\s*pwsh(\.exe)?\b",
     r"\bInvoke-Expression\b",
     r"\biwr\b.*\|\s*iex",
     r"powershell(\.exe)?\s+-[eE](ncodedCommand)?\s+",
-    
+    # Download-then-execute chained with &&, ; or || (not just piped)
+    r"\b(curl|wget|certutil|bitsadmin|Invoke-WebRequest|iwr)\b[^&;|\n]*(&&|;|\|\|)\s*\S*(sh|bash|python|python3|node|powershell|pwsh|cmd)(\.exe)?\b",
+    r"\bcertutil\b.*-urlcache",
+    r"\bbitsadmin\b.*\/transfer",
+    r"powershell(\.exe)?\s+-File\b",                # execute a downloaded/arbitrary .ps1 script
+    # Remote-download exfiltration via curl/wget upload flags
+    r"\bcurl\b.*(-F\b|--form\b|-T\b|--upload-file\b|--data-binary\s+@)",
+    r"\bwget\b.*--post-(file|data)\b",
+    # Arbitrary code execution via inline interpreter one-liners
+    r"\bpython3?\s+-c\b.*(os\.system|subprocess\.|popen\(|exec\(|eval\()",
+    r"\bnode\s+-e\b.*(child_process|require\(['\"]child_process['\"]\))",
+    r"\b(perl|ruby)\s+-e\b.*(system\(|exec\(|`)",
+
     # Irreversible git mutations
     r"\bgit\s+push\b",
     r"\bgit\s+reset\s+--hard\b",
