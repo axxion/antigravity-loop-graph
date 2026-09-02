@@ -44,6 +44,39 @@ class RunCommandTool(BaseTool):
         self.default_timeout = default_timeout
         self.max_output_chars = max_output_chars
 
+    # Provider credentials this process may hold. They are for talking to the model
+    # API and are never needed by a build or test command, so they are withheld from
+    # anything the agent runs: an inherited key is readable by any command the model
+    # chooses to execute (`env`, `printenv`, a postinstall script) and would be
+    # exfiltrated along with the command's output.
+    SENSITIVE_ENV_VARS = (
+        "ZAI_API_KEY",
+        "OPENAI_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "GROQ_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "AZURE_OPENAI_API_KEY",
+        "MISTRAL_API_KEY",
+        "TOGETHER_API_KEY",
+        "OPENROUTER_API_KEY",
+        "HF_TOKEN",
+    )
+
+    def _child_env(self) -> dict:
+        """Environment for a child process: this process's env minus model credentials."""
+        env = os.environ.copy()
+        for name in self.SENSITIVE_ENV_VARS:
+            env.pop(name, None)
+        # Catch provider keys not listed above without dropping legitimate variables
+        # such as SSH_AUTH_SOCK or npm_config_registry.
+        for name in list(env):
+            upper = name.upper()
+            if upper.endswith(("_API_KEY", "_SECRET_KEY")) or upper.startswith("OPENAI_"):
+                env.pop(name, None)
+        return env
+
     def execute(
         self, command: str, timeout: Optional[int] = None, **kwargs
     ) -> ToolResult:
@@ -65,6 +98,7 @@ class RunCommandTool(BaseTool):
                 capture_output=True,
                 text=False,  # capture bytes to handle encoding robustly
                 timeout=timeout_sec,
+                env=self._child_env(),
             )
 
             # Decode stdout and stderr with fallback

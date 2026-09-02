@@ -8,7 +8,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class TaskStatus(str, Enum):
@@ -99,6 +99,67 @@ class ProjectState:
                     pending.append(t)
         # Sort by priority ascending (1 is highest), then ID
         return sorted(pending, key=lambda x: (x.priority, x.id))
+
+    def find_dependency_problems(self) -> Tuple[List[List[str]], Dict[str, List[str]]]:
+        """Finds tasks that can never become schedulable.
+
+        get_pending_tasks() only admits a task once every dependency is DONE. Two shapes
+        therefore drop out of the schedule permanently and silently: a dependency cycle
+        (T1 -> T2 -> T1, where neither side can ever go first) and a reference to a task
+        id that does not exist on the board. Both look identical to "nothing left to do",
+        so they are detected explicitly here and reported to the user.
+
+        Returns (cycles, dangling):
+          cycles   -- each entry is an id path whose last element repeats its first
+          dangling -- task id -> the dependency ids that are not on the board
+        """
+        known_ids = {t.id for t in self.tasks}
+
+        dangling: Dict[str, List[str]] = {}
+        for t in self.tasks:
+            missing = [d for d in t.depends_on if d not in known_ids]
+            if missing:
+                dangling[t.id] = missing
+
+        # Only edges to real tasks can form a cycle; dangling edges are reported above.
+        graph: Dict[str, List[str]] = {
+            t.id: [d for d in t.depends_on if d in known_ids] for t in self.tasks
+        }
+
+        # Iterative three-colour DFS: recursion depth would otherwise scale with board size.
+        WHITE, GREY, BLACK = 0, 1, 2
+        colour = {node: WHITE for node in graph}
+        cycles: List[List[str]] = []
+        seen_cycles = set()
+
+        for root in graph:
+            if colour[root] != WHITE:
+                continue
+            path: List[str] = []
+            # (node, whether we are entering it for the first time)
+            stack = [(root, False)]
+            while stack:
+                node, leaving = stack.pop()
+                if leaving:
+                    path.pop()
+                    colour[node] = BLACK
+                    continue
+                if colour[node] == BLACK:
+                    continue
+                colour[node] = GREY
+                path.append(node)
+                stack.append((node, True))
+                for dep in graph.get(node, []):
+                    if colour[dep] == GREY:
+                        cycle = path[path.index(dep):] + [dep]
+                        key = tuple(cycle)
+                        if key not in seen_cycles:
+                            seen_cycles.add(key)
+                            cycles.append(cycle)
+                    elif colour[dep] == WHITE:
+                        stack.append((dep, False))
+
+        return cycles, dangling
 
     def save_checkpoint(self, path: Optional[Path] = None) -> Path:
         target = path or (self.project_path / ".loopgraph" / "checkpoint.json")

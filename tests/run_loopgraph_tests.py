@@ -34,6 +34,32 @@ from tests.test_antigravity_scaffold import (
     test_scaffold_writes_skill_and_rules_files,
     test_scaffold_is_idempotent_and_preserves_edits,
 )
+from tests.test_config_and_deps import (
+    test_config_file_values_are_loaded,
+    test_no_config_path_still_returns_defaults,
+    test_dependency_cycle_is_detected,
+    test_self_dependency_is_detected,
+    test_longer_cycle_is_detected,
+    test_dangling_dependency_is_detected,
+    test_healthy_dependency_chain_reports_no_problem,
+    test_child_env_keeps_path,
+)
+from tests.test_board_warnings import (
+    test_row_whose_title_contains_dashes_is_not_dropped,
+    test_separator_row_is_still_skipped,
+    test_short_row_is_reported_not_silently_dropped,
+    test_non_integer_priority_is_reported,
+    test_unknown_status_is_reported,
+    test_duplicate_task_id_is_reported,
+    test_clean_board_produces_no_warnings,
+    test_warnings_reset_between_parses,
+)
+from tests.test_python_compat import (
+    test_declared_minimum_matches_this_guard,
+    test_no_backslash_inside_fstring_expressions,
+    test_guard_detects_a_known_offender,
+    test_all_sources_parse,
+)
 
 LOOPGRAPH_TESTS = [
     ("test_path_sandbox_containment", test_path_sandbox_containment),
@@ -55,6 +81,26 @@ LOOPGRAPH_TESTS = [
     ("test_guardrails_blocks_known_bypasses", test_guardrails_blocks_known_bypasses),
     ("test_scaffold_writes_skill_and_rules_files", test_scaffold_writes_skill_and_rules_files),
     ("test_scaffold_is_idempotent_and_preserves_edits", test_scaffold_is_idempotent_and_preserves_edits),
+    ("test_config_file_values_are_loaded", test_config_file_values_are_loaded),
+    ("test_no_config_path_still_returns_defaults", test_no_config_path_still_returns_defaults),
+    ("test_dependency_cycle_is_detected", test_dependency_cycle_is_detected),
+    ("test_self_dependency_is_detected", test_self_dependency_is_detected),
+    ("test_longer_cycle_is_detected", test_longer_cycle_is_detected),
+    ("test_dangling_dependency_is_detected", test_dangling_dependency_is_detected),
+    ("test_healthy_dependency_chain_reports_no_problem", test_healthy_dependency_chain_reports_no_problem),
+    ("test_child_env_keeps_path", test_child_env_keeps_path),
+    ("test_row_whose_title_contains_dashes_is_not_dropped", test_row_whose_title_contains_dashes_is_not_dropped),
+    ("test_separator_row_is_still_skipped", test_separator_row_is_still_skipped),
+    ("test_short_row_is_reported_not_silently_dropped", test_short_row_is_reported_not_silently_dropped),
+    ("test_non_integer_priority_is_reported", test_non_integer_priority_is_reported),
+    ("test_unknown_status_is_reported", test_unknown_status_is_reported),
+    ("test_duplicate_task_id_is_reported", test_duplicate_task_id_is_reported),
+    ("test_clean_board_produces_no_warnings", test_clean_board_produces_no_warnings),
+    ("test_warnings_reset_between_parses", test_warnings_reset_between_parses),
+    ("test_declared_minimum_matches_this_guard", test_declared_minimum_matches_this_guard),
+    ("test_no_backslash_inside_fstring_expressions", test_no_backslash_inside_fstring_expressions),
+    ("test_guard_detects_a_known_offender", test_guard_detects_a_known_offender),
+    ("test_all_sources_parse", test_all_sources_parse),
 ]
 
 

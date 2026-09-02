@@ -14,7 +14,7 @@
 
 **Antigravity LoopGraph** unifies two foundational agent design disciplines:
 1. **Loop Engineering:** Sustained, self-correcting ReAct execution loops (`Sense -> Think -> Act -> Verify`) with mathematical convergence guarantees, anti-thrashing circuit breakers, and adversarial maker/checker verification.
-2. **Graph Engineering:** Explicit workflow orchestration modeled as a **StateGraph** (DAG / cyclic state machine) with topological dependency sorting, failure feedback routing, and persistent disk memory.
+2. **Graph Engineering:** Explicit workflow orchestration modeled as a **StateGraph** (DAG / cyclic state machine) with dependency-ordered scheduling, failure feedback routing, and persistent disk memory.
 
 ```
 [START]
@@ -23,7 +23,7 @@
 [1. ANALYZE NODE]  ------> Scan project vision (VISION.md) & codebase tree
    |
    v
-[2. PRIORITIZE NODE] ----> Topologically sort dependencies & select highest-priority task
+[2. PRIORITIZE NODE] ----> Admit only dependency-satisfied tasks, pick highest priority
    |
    v
 [3. IMPLEMENT NODE]  ----> ReAct Loop: Surgical file edits, search, execution & tests
@@ -58,7 +58,24 @@ Session state is preserved in immutable filesystem artifacts rather than fragile
 ### 4. Sandbox Path Containment & Command Blocklist
 All file operations (`read_file`, `write_file`, `replace_content`, search/discovery tools) are sandboxed strictly within the project root directory — path traversal, symlink escapes, and cross-drive access are rejected. Command execution is filtered through a denylist that blocks known-destructive patterns (recursive deletion, `format`, `shutdown`, download-then-execute chains, irreversible Git mutations, encoded PowerShell payloads, and more).
 
-**This is a denylist, not a sandbox.** LoopGraph gives an LLM the ability to run shell commands on your machine. A denylist can be tightened over time but can never be proven complete — treat `loopgraph run` the same way you'd treat handing an unattended script shell access: run it in a disposable environment or container, review `LEDGER.md` after each run, and never point it at a repository whose contents (README, VISION.md, source comments) you don't trust, since that content is fed into the agent's context and could attempt to steer it. There is currently no interactive human-approval step before a command executes — only blocked patterns are rejected.
+**This is a denylist, not a sandbox — and `run_command` is outside the file containment.**
+The path containment above governs the *file tools* only. `run_command` executes through
+the system shell, so any command that survives the denylist can read and write anywhere
+the invoking user can, including outside the project root. This is demonstrable: a plain
+`python script.py` will happily write to a parent directory. A denylist can be tightened
+over time but can never be proven complete.
+
+Treat `loopgraph run` the way you would treat handing an unattended script shell access:
+
+*   Run it in a disposable environment or container, not on a machine holding credentials or data you cannot lose.
+*   Review `LEDGER.md` after each run.
+*   Never point it at a repository whose contents (README, VISION.md, source comments) you don't trust — that text is fed into the agent's context and can attempt to steer it.
+
+There is currently **no interactive human-approval step** before a command executes; only
+blocked patterns are rejected. As a partial mitigation, model API keys
+(`ZAI_API_KEY`, `OPENAI_API_KEY`, and other `*_API_KEY` variables) are stripped from the
+environment of every command the agent runs, so an executed command cannot read them back
+out of its own environment.
 
 ---
 
@@ -100,7 +117,26 @@ loopgraph run /path/to/project --tasks 5 --budget-tokens 1500000 --stop-on-fail
 
 # Specify custom OpenAI-compatible models
 loopgraph run /path/to/project --model glm-5.3-flash --verify-model gpt-4o
+
+# Cap tool iterations per task and load settings from a config file
+loopgraph run /path/to/project --max-iters 40 --config ./config.json
 ```
+
+`loop` is an alias for `run` and accepts the same flags.
+
+| Flag | Default | Purpose |
+|---|---|---|
+| `--tasks` | 3 | How many tasks to complete in this run |
+| `--budget-tokens` | 2,000,000 | Total token ceiling across the run |
+| `--max-iters` | 25 | Maximum tool iterations per task |
+| `--model` | `glm-5.3-flash` | Implementation model (any OpenAI-compatible endpoint) |
+| `--verify-model` | same as `--model` | Independent verifier model |
+| `--stop-on-fail` | off | Stop at the first task that fails verification |
+| `--config` | — | Path to a `config.json` holding any of the above |
+
+Precedence is **explicit flag > `config.json` > built-in default**, so a value you set in
+`config.json` is used unless you override it on the command line. A `--config` path that
+does not exist is a hard error rather than a silent fallback to defaults.
 
 ### 4. Inspect Live Board Status
 ```bash

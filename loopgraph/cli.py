@@ -17,7 +17,7 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 from loopgraph.antigravity_scaffold import scaffold_antigravity_integration
-from loopgraph.core.state import TaskStatus
+from loopgraph.core.state import ProjectState, TaskStatus
 from loopgraph.engine import EngineConfig, GraphEngine
 from loopgraph.memory.board import BoardManager
 from loopgraph.memory.ledger import LedgerManager
@@ -27,6 +27,34 @@ from loopgraph.memory.vision import VisionManager
 def log(msg: str) -> None:
     now = datetime.now().strftime("%H:%M:%S")
     print(f"[\033[94mloopgraph\033[0m {now}] {msg}", flush=True)
+
+
+def report_board_warnings(board_mgr) -> bool:
+    """Prints anything parse() had to drop or coerce in BOARD.md. Returns True if any."""
+    if not board_mgr.warnings:
+        return False
+    log("⚠️  BOARD.md ayrıştırma uyarıları:")
+    for warning in board_mgr.warnings:
+        log(f"   · {warning}")
+    return True
+
+
+def report_dependency_problems(state) -> bool:
+    """Prints any dependency cycle or missing dependency id found on the board.
+
+    Such tasks are excluded from scheduling forever and look exactly like "nothing left
+    to do", so they are named explicitly here. Returns True if a problem was reported.
+    """
+    cycles, dangling = state.find_dependency_problems()
+    if not cycles and not dangling:
+        return False
+
+    for cycle in cycles:
+        log(f"⚠️  Bağımlılık döngüsü: {' → '.join(cycle)} — bu görevler asla başlatılamaz.")
+    for task_id, missing in sorted(dangling.items()):
+        log(f"⚠️  [{task_id}] panoda olmayan göreve bağımlı: {', '.join(missing)} — asla başlatılamaz.")
+    log("   Düzeltmek için BOARD.md'deki 'Bağımlılıklar' sütununu düzenleyin.")
+    return True
 
 
 def cmd_init(args) -> int:
@@ -97,6 +125,11 @@ def cmd_status(args) -> int:
             for c in t.acceptance:
                 print(f"       · {c}")
     print("=" * 60 + "\n")
+
+    report_board_warnings(b_mgr)
+    state = ProjectState(project_path=proj)
+    state.tasks = tasks
+    report_dependency_problems(state)
     return 0
 
 
@@ -106,20 +139,35 @@ def cmd_run(args) -> int:
         log(f"Hata: Klasör bulunamadı: {proj}")
         return 2
 
-    cfg = EngineConfig.from_file_or_defaults(args.config)
-    if args.tasks:
-        max_tasks = args.tasks
-    else:
-        max_tasks = 3
+    try:
+        cfg = EngineConfig.from_file_or_defaults(args.config)
+    except (OSError, ValueError) as exc:
+        log(f"Hata: config dosyası okunamadı ({args.config}): {exc}")
+        return 2
 
-    if args.model:
+    # Precedence: explicit CLI flag > config.json > built-in default.
+    # `is not None` (not truthiness) so that an explicit 0 is honoured rather than
+    # silently replaced by a default — this is a tool that spends tokens and runs
+    # shell commands, so a ceiling the user set must never be widened behind their back.
+    max_tasks = args.tasks if args.tasks is not None else 3
+
+    if args.model is not None:
         cfg.model = args.model
-    if args.verify_model:
+    if args.verify_model is not None:
         cfg.verify_model = args.verify_model
-    if args.budget_tokens:
+    if args.budget_tokens is not None:
         cfg.budget_tokens = args.budget_tokens
-    if args.max_iters:
+    if args.max_iters is not None:
         cfg.max_loop_iters = args.max_iters
+
+    for label, value in (
+        ("--tasks", max_tasks),
+        ("--budget-tokens", cfg.budget_tokens),
+        ("--max-iters", cfg.max_loop_iters),
+    ):
+        if value < 0:
+            log(f"Hata: {label} negatif olamaz (verilen: {value}).")
+            return 2
 
     def step_listener(event_type: str, data: any):
         if event_type == "node_start":
@@ -150,6 +198,15 @@ def cmd_run(args) -> int:
         log("          (Desteklenen: ZAI_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY, GROQ_API_KEY)")
         return 2
 
+    # Surfaced before the run, not after: a cycle or missing dependency id silently
+    # removes tasks from the schedule, so the engine would otherwise report "nothing
+    # to do" and exit successfully while the board still has open work.
+    board_mgr = BoardManager(proj)
+    board_state = ProjectState(project_path=proj)
+    board_state.tasks = board_mgr.parse()
+    report_board_warnings(board_mgr)
+    report_dependency_problems(board_state)
+
     log(f"Graf Motoru Başlatılıyor... Proje: {proj}")
     log(f"Model: {cfg.model} | Doğrulayıcı Model: {cfg.verify_model or cfg.model}")
     log(f"Maksimum Görev Sayısı: {max_tasks} | Token Bütçesi: {cfg.budget_tokens:,}")
@@ -172,7 +229,12 @@ def cmd_plan(args) -> int:
         log(f"Hata: Klasör bulunamadı: {proj}")
         return 2
 
-    cfg = EngineConfig.from_file_or_defaults(args.config)
+    try:
+        cfg = EngineConfig.from_file_or_defaults(args.config)
+    except (OSError, ValueError) as exc:
+        log(f"Hata: config dosyası okunamadı ({args.config}): {exc}")
+        return 2
+
     engine = GraphEngine(project_path=proj, config=cfg)
 
     log(f"Proje analiz ediliyor ve pano güncelleniyor: {proj}")
@@ -211,12 +273,15 @@ def main() -> int:
         p_r = subparsers.add_parser(cmd_name, help="Projeyi otonom döngü ve graf ile geliştirir")
         p_r.add_argument("project", default=".", nargs="?", help="Proje klasörü (varsayılan: .)")
         p_r.add_argument("--config", help="config.json dosya yolu")
-        p_r.add_argument("--tasks", type=int, default=3, help="Kaç görev tamamlanacak (varsayılan: 3)")
+        # NOTE: every default is None on purpose. These flags must only override
+        # config.json when the user actually passed them; a concrete default here is
+        # indistinguishable from an explicit value and silently discards the config file.
+        p_r.add_argument("--tasks", type=int, default=None, help="Kaç görev tamamlanacak (varsayılan: 3)")
         p_r.add_argument("--model", help="LLM model adı")
         p_r.add_argument("--verify-model", help="Doğrulayıcı LLM model adı")
-        p_r.add_argument("--max-iters", type=int, default=25, help="Görev başına maksimum araç iterasyonu")
-        p_r.add_argument("--budget-tokens", type=int, default=2_000_000, help="Toplam token tavanı")
-        p_r.add_argument("--stop-on-fail", action="store_true", help="İlk başarısız görevde dur")
+        p_r.add_argument("--max-iters", type=int, default=None, help="Görev başına maksimum araç iterasyonu (varsayılan: 25)")
+        p_r.add_argument("--budget-tokens", type=int, default=None, help="Toplam token tavanı (varsayılan: 2.000.000)")
+        p_r.add_argument("--stop-on-fail", action="store_true", default=None, help="İlk başarısız görevde dur")
 
     # If no subcommand provided, support legacy positional argument: loopgraph <project> [flags]
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-") and sys.argv[1] not in ("init", "status", "plan", "run", "loop"):

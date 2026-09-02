@@ -46,10 +46,32 @@ class EngineConfig:
 
     @classmethod
     def from_file_or_defaults(cls, config_path: Optional[Union[str, Path]] = None) -> EngineConfig:
-        if config_path and Path(config_path).exists():
-            data = json.loads(Path(config_path).read_text(encoding="utf-8"))
-            return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
-        return cls()
+        """Loads configuration from `config_path`, or returns built-in defaults.
+
+        Raises FileNotFoundError when an explicit path was given but does not exist.
+        Silently falling back to defaults there would run the agent with a different
+        model and a different token ceiling than the user asked for, with no indication
+        that their file was never read.
+        """
+        if config_path is None:
+            return cls()
+
+        path = Path(config_path)
+        if not path.exists():
+            raise FileNotFoundError(f"config dosyası bulunamadı: {path}")
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"config dosyası bir JSON nesnesi olmalı, {type(data).__name__} bulundu: {path}"
+            )
+
+        known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
+        unknown = sorted(set(data) - set(known))
+        if unknown:
+            # Surfaced rather than dropped: a typo'd key would otherwise look applied.
+            print(f"  [!] config.json içinde tanınmayan anahtar(lar) yok sayıldı: {', '.join(unknown)}")
+        return cls(**known)
 
 
 @dataclass
