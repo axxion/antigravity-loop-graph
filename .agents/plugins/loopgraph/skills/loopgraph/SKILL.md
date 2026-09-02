@@ -39,7 +39,20 @@ loopgraph run . --tasks 5 --budget-tokens 1000000 --stop-on-fail
 loopgraph status .
 ```
 
-## 🛡️ Core Rules
+## Antigravity `/goal` and Slash Command Integration
+
+When the user types `/goal` or asks to autonomously complete a milestone in Antigravity:
+1. **Load Active Board:** LoopGraph automatically parses `BOARD.md`.
+2. **Topological Task Execution Loop:**
+   - Picks the highest priority unblocked `TODO` task.
+   - Sets status to `IN_PROGRESS` in `BOARD.md`.
+   - Executes ReAct loop: Reads target files, applies surgical edits, runs tests.
+   - Runs verification: Executes build/test commands.
+   - If tests pass: Updates `BOARD.md` to `[x] DONE` and appends proof to `LEDGER.md`.
+   - If tests fail: Re-injects error feedback into next iteration (up to 3 retries).
+3. **Loop Until Goal Convergence:** The agent does NOT stop until all actionable tasks on `BOARD.md` are marked `DONE` or blocked.
+
+## Core Rules
 1. **Maker/Checker Separation ("Yapan Notlandıramaz"):** Verification runs in an isolated context with read-only tools.
 2. **Externalized Memory:** All status is stored on disk in `BOARD.md` and `LEDGER.md`.
 3. **Anti-Thrashing:** Halts loops if 3 identical observations are produced consecutively.
