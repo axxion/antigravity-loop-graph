@@ -156,6 +156,21 @@ runner = graph.compile()
 runner.run(ProjectState(project_path="."))
 ```
 
+## Execution Modes: Antigravity Native vs. Standalone CLI
+
+LoopGraph supports two seamless operational workflows:
+
+### Mode 1: Antigravity IDE Native (Recommended - Zero API Key Required)
+When working inside Google Antigravity IDE, LoopGraph operates natively using Antigravity's built-in intelligence. No external API keys or environment variables are required.
+- Initialize memory: `loopgraph init .`
+- Directly in Antigravity Chat: *"Use LoopGraph to plan tasks from VISION.md and execute them on BOARD.md"*
+- Antigravity automatically activates `.agents/skills/loopgraph/SKILL.md` and coordinates the graph state machine.
+
+### Mode 2: Standalone CLI / CI/CD (External API Key)
+For headless servers, CI/CD runners, or standalone terminal execution without an IDE:
+- Set your preferred API key: `export ZAI_API_KEY="your-key"` (Supports `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`)
+- Run commands: `loopgraph plan .` and `loopgraph run . --tasks 3`
+
 ---
 
 ## Google Antigravity Integration
