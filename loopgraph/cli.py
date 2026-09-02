@@ -201,21 +201,22 @@ def main() -> int:
     p_plan.add_argument("project", default=".", nargs="?", help="Proje klasörü")
     p_plan.add_argument("--config", help="config.json dosya yolu")
 
-    # run
-    p_run = subparsers.add_parser("run", help="Projeyi otonom döngü ve graf ile geliştirir")
-    p_run.add_argument("project", default=".", nargs="?", help="Proje klasörü")
-    p_run.add_argument("--config", help="config.json dosya yolu")
-    p_run.add_argument("--tasks", type=int, default=3, help="Kaç görev tamamlanacak (varsayılan: 3)")
-    p_run.add_argument("--model", help="LLM model adı")
-    p_run.add_argument("--verify-model", help="Doğrulayıcı LLM model adı")
-    p_run.add_argument("--max-iters", type=int, default=25, help="Görev başına maksimum araç iterasyonu")
-    p_run.add_argument("--budget-tokens", type=int, default=2_000_000, help="Toplam token tavanı")
-    p_run.add_argument("--stop-on-fail", action="store_true", help="İlk başarısız görevde dur")
+    # run & loop (aliases)
+    for cmd_name in ("run", "loop"):
+        p_r = subparsers.add_parser(cmd_name, help="Projeyi otonom döngü ve graf ile geliştirir")
+        p_r.add_argument("project", default=".", nargs="?", help="Proje klasörü (varsayılan: .)")
+        p_r.add_argument("--config", help="config.json dosya yolu")
+        p_r.add_argument("--tasks", type=int, default=3, help="Kaç görev tamamlanacak (varsayılan: 3)")
+        p_r.add_argument("--model", help="LLM model adı")
+        p_r.add_argument("--verify-model", help="Doğrulayıcı LLM model adı")
+        p_r.add_argument("--max-iters", type=int, default=25, help="Görev başına maksimum araç iterasyonu")
+        p_r.add_argument("--budget-tokens", type=int, default=2_000_000, help="Toplam token tavanı")
+        p_r.add_argument("--stop-on-fail", action="store_true", help="İlk başarısız görevde dur")
 
     # If no subcommand provided, support legacy positional argument: loopgraph <project> [flags]
-    if len(sys.argv) > 1 and not sys.argv[1].startswith("-") and sys.argv[1] not in ("init", "status", "plan", "run"):
-        # Legacy mode: default to run
-        sys.argv.insert(1, "run")
+    if len(sys.argv) > 1 and not sys.argv[1].startswith("-") and sys.argv[1] not in ("init", "status", "plan", "run", "loop"):
+        # Legacy mode: default to loop
+        sys.argv.insert(1, "loop")
 
     args = parser.parse_args()
 
@@ -225,7 +226,7 @@ def main() -> int:
         return cmd_status(args)
     elif args.subcommand == "plan":
         return cmd_plan(args)
-    elif args.subcommand == "run":
+    elif args.subcommand in ("run", "loop"):
         return cmd_run(args)
     else:
         parser.print_help()
