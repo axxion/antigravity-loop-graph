@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Antigravity runtime cache
+.agents/.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.loopgraph/
+
+# Exclude Antigravity Token Optimizer
+antigravity_optimizer/
+.agents/plugins/token-optimizer/
+.agents/skills/token-optimizer/
+.agents/rules/token_optimization.md
