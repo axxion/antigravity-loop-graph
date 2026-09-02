@@ -20,6 +20,10 @@ from tests.test_graph import (
     test_basic_stategraph_transitions,
     test_react_loop_anti_thrashing,
 )
+from tests.test_heuristic_planner import (
+    test_heuristic_planner_from_vision,
+    test_plan_without_api_key,
+)
 from tests.test_edge_cases import (
     test_security_path_traversal_and_drive_escaping,
     test_security_command_injection_and_chained_attacks,
@@ -38,6 +42,8 @@ LOOPGRAPH_TESTS = [
     ("test_ledger_logging", test_ledger_logging),
     ("test_basic_stategraph_transitions", test_basic_stategraph_transitions),
     ("test_react_loop_anti_thrashing", test_react_loop_anti_thrashing),
+    ("test_heuristic_planner_from_vision", test_heuristic_planner_from_vision),
+    ("test_plan_without_api_key", test_plan_without_api_key),
     ("test_security_path_traversal_and_drive_escaping", test_security_path_traversal_and_drive_escaping),
     ("test_security_command_injection_and_chained_attacks", test_security_command_injection_and_chained_attacks),
     ("test_file_tools_edge_cases", test_file_tools_edge_cases),

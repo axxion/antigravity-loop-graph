@@ -124,23 +124,35 @@ class AnalyzeNode(BaseNode):
             f"# Proje Dosya ve Kod Yapısı\n{snapshot}"
         )
 
-        resp = self.llm.chat([
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ])
-
         tasks_from_llm: List[Task] = []
-        if resp and resp.content:
-            # Extract JSON block
-            m = re.search(r"\{.*\}", resp.content, re.DOTALL)
-            if m:
-                try:
-                    data = json.loads(m.group(0))
-                    raw_tasks = data.get("tasks", [])
-                    for t_dict in raw_tasks:
-                        tasks_from_llm.append(Task.from_dict(t_dict))
-                except json.JSONDecodeError:
-                    pass
+
+        # If LLM is configured, request dynamic task plan
+        if self.llm.is_configured:
+            try:
+                resp = self.llm.chat([
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ])
+                if resp and resp.content:
+                    # Extract JSON block
+                    m = re.search(r"\{.*\}", resp.content, re.DOTALL)
+                    if m:
+                        try:
+                            data = json.loads(m.group(0))
+                            raw_tasks = data.get("tasks", [])
+                            for t_dict in raw_tasks:
+                                tasks_from_llm.append(Task.from_dict(t_dict))
+                        except json.JSONDecodeError:
+                            pass
+            except Exception:
+                pass
+
+        # If LLM returned no tasks or is not configured, use HeuristicPlanner directly
+        if not tasks_from_llm:
+            from loopgraph.nodes.heuristic_planner import HeuristicPlanner
+            tasks_from_llm = HeuristicPlanner.generate_plan(
+                self.guardrails.project_path, vision
+            )
 
         # Merge new tasks with existing tasks preserving status
         merged_tasks: List[Task] = []

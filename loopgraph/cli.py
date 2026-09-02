@@ -170,16 +170,10 @@ def cmd_plan(args) -> int:
     cfg = EngineConfig.from_file_or_defaults(args.config)
     engine = GraphEngine(project_path=proj, config=cfg)
 
-    if not engine.llm.is_configured:
-        log("⚠️  BİLGİ: Harici LLM API Anahtarı bulunamadı.")
-        log("   [Mod 1 - Antigravity IDE (Önerilen)]: Antigravity sohbetinde doğrudan")
-        log("          'LoopGraph ile VISION.md planını çıkar' diyerek IDE'nin kendi yapay zeka")
-        log("          motorunu API anahtarı olmadan kullanabilirsiniz.")
-        log(f"   [Mod 2 - Harici CLI]: Ortam değişkenini ayarlayabilirsiniz: $env:{cfg.api_key_env}='anahtariniz'")
-        log("          (Desteklenen: ZAI_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY, GROQ_API_KEY)")
-        return 2
-
     log(f"Proje analiz ediliyor ve pano güncelleniyor: {proj}")
+    if not engine.llm.is_configured:
+        log("💡 BİLGİ: Harici LLM API Anahtarı bulunamadı, dahili yerel planlayıcı (Heuristic Planner) devrede.")
+    
     tasks = engine.plan_only()
     log(f"✅ Analiz tamamlandı. Toplam {len(tasks)} görev panoya (BOARD.md) yazıldı:")
     for t in sorted(tasks, key=lambda x: (x.priority, x.id)):
